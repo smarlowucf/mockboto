@@ -87,3 +87,19 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+### Vim ###
+# swap
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+# session
+Session.vim
+# temporary
+.netrwhist
+*i~
+
+### PyCharm ###
+.idea/
+
+### pip ###
+pip-selfcheck.json

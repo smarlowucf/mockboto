@@ -30,6 +30,8 @@ setup(
     ],
     package_dir={'mockboto3':
                  'mockboto3'},
+    setup_requires=['nose>=1.0',
+                    'coverage>=4.0.0'],
     include_package_data=True,
     install_requires=requirements,
     license="MIT license",
@@ -47,7 +49,8 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
-    test_suite='tests',
+    test_suite='nose.collector',
     tests_require=test_requirements
 )
