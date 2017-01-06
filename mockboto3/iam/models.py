@@ -1,6 +1,7 @@
 """"Iam Classes."""
 
-from datetime import datetime, timezone
+from pytz import utc
+from datetime import datetime
 
 from mockboto3.core.utils import get_random_string
 
@@ -11,7 +12,7 @@ class AccessKey(object):
     def __init__(self, user_name):
         super(AccessKey, self).__init__()
         self.id = get_random_string(length=20)
-        self.create_date = datetime.now(timezone.utc)
+        self.create_date = datetime.now(utc)
         self.key = get_random_string(length=40)
         self.last_used = AccessKeyLastUsed()
         self.status = "Active"
@@ -34,7 +35,7 @@ class Group(object):
     def __init__(self, name):
         super(Group, self).__init__()
         self.id = get_random_string(length=10)
-        self.create_date = datetime.now(timezone.utc)
+        self.create_date = datetime.now(utc)
         self.name = name
         self.users = []
 
@@ -46,7 +47,7 @@ class User(object):
         super(User, self).__init__()
         self.id = get_random_string(length=10)
         self.attached_policies = []
-        self.create_date = datetime.now(timezone.utc)
+        self.create_date = datetime.now(utc)
         self.password_last_used = None
         self.groups = []
         self.mfa_devices = []

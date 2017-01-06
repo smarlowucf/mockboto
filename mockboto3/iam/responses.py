@@ -1,13 +1,14 @@
 """"Mocked responses for AWS endpoints."""
 
-from datetime import datetime, timezone
+from pytz import utc
+from datetime import datetime
 
 from .constants import signing_cert
 
 
 def get_time_now():
     """Return the time as a datetime object and string."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(utc)
     now_str = now.strftime('%a, %d %b %Y %H:%M:%S GMT')
     return now, now_str
 
