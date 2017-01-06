@@ -39,7 +39,9 @@ class AWSMock(object):
         try:
             return getattr(self, inflection(operation_name))(kwarg)
         except AttributeError:
-            raise client_error(operation_name, '500', 'Operation not mocked.')
+            raise client_error(operation_name,
+                               'NoSuchMethod',
+                               'Operation not mocked.')
 
     def add_user_to_group(self, kwarg):
         """Add user to the group if user and group exist."""

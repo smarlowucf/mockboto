@@ -17,8 +17,8 @@ class TestIam:
 
     def test_unmocked_operation(self):
         """Test operation not mocked error is returned."""
-        msg = 'An error occurred (500) when calling the CreateGecko ' \
-              'operation: Operation not mocked.'
+        msg = 'An error occurred (NoSuchMethod) when calling the ' \
+              'CreateGecko operation: Operation not mocked.'
 
         try:
             mocker = AWSMock()

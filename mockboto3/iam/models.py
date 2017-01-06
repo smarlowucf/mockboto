@@ -11,9 +11,21 @@ class AccessKey(object):
     def __init__(self, user_name):
         super(AccessKey, self).__init__()
         self.id = get_random_string(length=20)
+        self.create_date = datetime.now(timezone.utc)
         self.key = get_random_string(length=40)
+        self.last_used = AccessKeyLastUsed()
         self.status = "Active"
         self.username = user_name
+
+
+class AccessKeyLastUsed(object):
+    """Access Key Last Used for tracking how and when a key was used."""
+
+    def __init__(self):
+        super(AccessKeyLastUsed, self).__init__()
+        self.date = None
+        self.region = None
+        self.service_name = None
 
 
 class Group(object):
@@ -22,6 +34,7 @@ class Group(object):
     def __init__(self, name):
         super(Group, self).__init__()
         self.id = get_random_string(length=10)
+        self.create_date = datetime.now(timezone.utc)
         self.name = name
         self.users = []
 
@@ -33,7 +46,7 @@ class User(object):
         super(User, self).__init__()
         self.id = get_random_string(length=10)
         self.attached_policies = []
-        self.creation_date = datetime.now(timezone.utc)
+        self.create_date = datetime.now(timezone.utc)
         self.password_last_used = None
         self.groups = []
         self.mfa_devices = []

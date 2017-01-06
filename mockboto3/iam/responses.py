@@ -145,7 +145,7 @@ def list_users_response(users):
     parsed_response['IsTruncated'] = False
     users_response = [{
         'UserId': user.id,
-        'CreateDate': user.creation_date,
+        'CreateDate': user.create_date,
         'UserName': user.username,
         'Arn': 'arn:aws:iam::123456789123:user/openbare/%s' % user.username,
         'Path': '/openbare/',
