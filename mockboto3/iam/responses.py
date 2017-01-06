@@ -2,14 +2,7 @@
 
 from datetime import datetime, timezone
 
-from mockboto3.core.exceptions import MockClientError
 from .constants import signing_cert
-
-
-def client_error(operation, code, message):
-    """Return mock client error instance."""
-    parsed_response = {'Error': {'Code': code, 'Message': message}}
-    return MockClientError(parsed_response, operation)
 
 
 def get_time_now():

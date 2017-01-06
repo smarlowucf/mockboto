@@ -5,15 +5,16 @@ from unittest.mock import patch
 
 from .constants import group_name, username
 from .models import AccessKey, Group, User
-from .responses import (access_key_response, client_error, group_response,
+from .responses import (access_key_response, group_response,
                         generic_response, list_access_keys_response,
                         list_attached_policies_response,
                         list_mfa_devices_response,
                         list_signing_certs_response, list_groups_response,
                         list_groups_for_user_response,
-                        list_users_response, login_profile_response, user_response,
-                        user_group_response)
+                        list_users_response, login_profile_response,
+                        user_response, user_group_response)
 
+from mockboto3.core.exceptions import client_error
 from mockboto3.core.utils import inflection
 
 

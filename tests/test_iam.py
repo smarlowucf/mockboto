@@ -1,6 +1,6 @@
 import boto3
 
-from mockboto3.core.exceptions import MockClientError
+from mockboto3.core.exceptions import MockBoto3ClientError
 from mockboto3.iam.constants import group_name, username
 from mockboto3.iam.endpoints import AWSMock, mock_iam
 
@@ -25,7 +25,7 @@ class TestIam:
             mocker.mock_make_api_call('CreateGecko',
                                       {'Name': 'gecko'})
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -38,7 +38,7 @@ class TestIam:
             # Assert get non existing user exception
             self.client.get_user(UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -52,7 +52,7 @@ class TestIam:
             # Assert list non existent user groups exception
             self.client.list_groups_for_user(UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -67,7 +67,7 @@ class TestIam:
             self.client.add_user_to_group(GroupName=self.kwarg[group_name],
                                           UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -81,7 +81,7 @@ class TestIam:
             # Assert delete non existent user exception
             self.client.delete_user(UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -95,7 +95,7 @@ class TestIam:
             # Assert delete non existent user exception
             self.client.delete_group(GroupName=self.kwarg[group_name])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -111,7 +111,7 @@ class TestIam:
                 GroupName=self.kwarg[group_name],
                 UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -128,7 +128,7 @@ class TestIam:
             self.client.add_user_to_group(GroupName=self.kwarg[group_name],
                                           UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
         # Create group and add user to group
@@ -153,7 +153,7 @@ class TestIam:
             # Assert create group exists raises exception
             self.client.create_group(GroupName=self.kwarg[group_name])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
         msg = 'An error occurred (EntityAlreadyExists) when calling the ' \
@@ -163,7 +163,7 @@ class TestIam:
             # Assert create user exists raises exception
             self.client.create_user(UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
         # Get user response
@@ -205,7 +205,7 @@ class TestIam:
             # Assert create access key for non existent user exception
             self.client.create_access_key(UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -219,7 +219,7 @@ class TestIam:
             # Assert delete non existent access key exception
             self.client.delete_access_key(AccessKeyId='key1234567891234')
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
@@ -233,7 +233,7 @@ class TestIam:
             # Assert list access keys for non existent user exception
             self.client.list_access_keys(UserName=self.kwarg[username])
 
-        except MockClientError as e:
+        except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
     @mock_iam
