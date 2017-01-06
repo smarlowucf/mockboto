@@ -189,9 +189,9 @@ class AWSMock(object):
         """List all of the users access keys if user exists."""
         self._check_user_exists(kwarg, 'ListAccessKeys')
 
-        keys = {access_key.id: access_key for key, access_key
-                in self.access_keys.items()
-                if access_key.username == kwarg[username]}
+        keys = dict((access_key.id, access_key) for key, access_key
+                    in self.access_keys.items()
+                    if access_key.username == kwarg[username])
         return list_access_keys_response(keys)
 
     def list_attached_user_policies(self, kwarg):
