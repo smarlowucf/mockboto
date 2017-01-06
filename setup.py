@@ -10,11 +10,12 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    # TODO: put package requirements here
+    'boto3',
 ]
 
 test_requirements = [
-    # TODO: put package test requirements here
+    'coverage',
+    'nose',
 ]
 
 setup(
@@ -30,8 +31,6 @@ setup(
     ],
     package_dir={'mockboto3':
                  'mockboto3'},
-    setup_requires=['nose>=1.0',
-                    'coverage>=4.0.0'],
     include_package_data=True,
     install_requires=requirements,
     license="MIT license",
@@ -42,9 +41,6 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',

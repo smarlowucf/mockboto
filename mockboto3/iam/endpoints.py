@@ -1,11 +1,9 @@
+# -*- coding: utf-8 -*-
+
 """"Mocked endpoints."""
 
 from functools import wraps
-
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
+from unittest.mock import patch
 
 from .constants import group_name, username
 from .models import AccessKey, Group, User

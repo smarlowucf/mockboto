@@ -1,10 +1,13 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import boto3
 
 from mockboto3.core.exceptions import MockBoto3ClientError
 from mockboto3.iam.constants import group_name, username
 from mockboto3.iam.endpoints import AWSMock, mock_iam
 
-from nose.tools import assert_equal, assert_raises, assert_in, assert_not_in
+from nose.tools import assert_equal
 
 
 class TestIam:
