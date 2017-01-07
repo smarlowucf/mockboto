@@ -25,9 +25,9 @@ class AccessKeyLastUsed(object):
 
     def __init__(self):
         super(AccessKeyLastUsed, self).__init__()
-        self.date = None
-        self.region = None
-        self.service_name = None
+        self.date = datetime.now(timezone.utc)
+        self.region = 'us-west-1'
+        self.service_name = 'iam'
 
 
 class Group(object):
@@ -41,6 +41,16 @@ class Group(object):
         self.users = []
 
 
+class LoginProfile(object):
+    """Login profile (password) for AWS User."""
+
+    def __init__(self, password, reset_required=False):
+        super(LoginProfile, self).__init__()
+        self.password = password
+        self.create_date = datetime.now(timezone.utc)
+        self.reset_required = reset_required
+
+
 class User(object):
     """User class used for mocking AWS backend user objects."""
 
@@ -49,9 +59,21 @@ class User(object):
         self.id = get_random_string(length=10)
         self.attached_policies = []
         self.create_date = datetime.now(timezone.utc)
-        self.password_last_used = None
         self.groups = []
+        self.login_profile = None
         self.mfa_devices = []
-        self.password = None
+        self.password_last_used = None
         self.signing_certs = []
         self.username = user_name
+
+    def create_login_profile(self, password, reset_required=False):
+        self.login_profile = LoginProfile(password, reset_required)
+
+    def delete_login_profile(self):
+        self.login_profile = None
+
+    def update_login_profile(self, password=None, reset_required=None):
+        if password:
+            self.login_profile.password = password
+        if reset_required is not None:
+            self.login_profile.reset_required = reset_required

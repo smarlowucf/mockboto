@@ -5,27 +5,19 @@
 from functools import wraps
 from unittest.mock import patch
 
-from .constants import group_name, username
-from .models import AccessKey, Group, User
-from .responses import (access_key_response, group_response,
-                        generic_response, list_access_keys_response,
-                        list_attached_policies_response,
-                        list_mfa_devices_response,
-                        list_signing_certs_response, list_groups_response,
-                        list_groups_for_user_response,
-                        list_users_response, login_profile_response,
-                        user_response, user_group_response)
-
 from mockboto3.core.exceptions import client_error
 from mockboto3.core.utils import inflection
 
+from mockboto3.iam import responses
+from mockboto3.iam.models import AccessKey, Group, User
 
-class AWSMock(object):
-    """Class for mocking AWS endpoints."""
+
+class MockIam(object):
+    """Class for mocking iam endpoints."""
 
     def __init__(self):
         """Initialize class."""
-        super(AWSMock, self).__init__()
+        super(MockIam, self).__init__()
         self.access_keys = {}
         self.groups = {}
         self.users = {}
@@ -47,68 +39,73 @@ class AWSMock(object):
 
     def add_user_to_group(self, kwarg):
         """Add user to the group if user and group exist."""
-        self._check_user_exists(kwarg, 'AddUserToGroup')
-        self._check_group_exists(kwarg, 'AddUserToGroup')
+        self._check_user_exists(kwarg['UserName'], 'AddUserToGroup')
+        self._check_group_exists(kwarg['GroupName'], 'AddUserToGroup')
 
-        user = self.users[kwarg[username]]
-        group = self.groups[kwarg[group_name]]
+        user = self.users[kwarg['UserName']]
+        group = self.groups[kwarg['GroupName']]
 
         group.users.append(user.username)
         user.groups.append(group.name)
-        return user_group_response()
+        return responses.user_group_response()
 
     def create_access_key(self, kwarg):
         """Create access key for user if user exists."""
-        self._check_user_exists(kwarg, 'CreateAccessKey')
+        self._check_user_exists(kwarg['UserName'], 'CreateAccessKey')
 
-        access_key = AccessKey(kwarg[username])
+        access_key = AccessKey(kwarg['UserName'])
         self.access_keys[access_key.id] = access_key
-        return access_key_response(access_key)
+        return responses.access_key_response(access_key)
 
     def create_group(self, kwarg):
         """Create group if it does not exist."""
-        if kwarg[group_name] in self.groups:
+        if kwarg['GroupName'] in self.groups:
             raise client_error('CreateGroup',
                                'EntityAlreadyExists',
                                'Group with name %s already exists.'
-                               % kwarg[group_name])
+                               % kwarg['GroupName'])
 
-        group = Group(kwarg[group_name])
+        group = Group(kwarg['GroupName'])
         self.groups[group.name] = group
-        return group_response(group.name, group.id)
+        return responses.group_response(group.name, group.id)
 
     def create_login_profile(self, kwarg):
         """Create login profile for user if user has no password."""
-        user = self.users[kwarg[username]]
-        if user.password:
-            raise client_error('CreateLoginProfile',
-                               '409',
-                               'LoginProfile for %s exists' % user.username)
+        self._check_user_exists(kwarg['UserName'], 'CreateLoginProfile')
 
-        user.password = kwarg['Password']
-        return login_profile_response(user.username)
+        user = self.users[kwarg['UserName']]
+        if user.login_profile:
+            raise client_error('CreateLoginProfile',
+                               'EntityAlreadyExists',
+                               'LoginProfile for user with name %s '
+                               'already exists.' % user.username)
+
+        reset_required = kwarg.get('PasswordResetRequired', None)
+        user.create_login_profile(kwarg['Password'],
+                                  reset_required=reset_required)
+        return responses.login_profile_response(user, create=True)
 
     def create_user(self, kwarg):
         """Create user if user does not exist."""
-        if kwarg[username] in self.users:
+        if kwarg['UserName'] in self.users:
             raise client_error('CreateUser',
                                'EntityAlreadyExists',
                                'User with name %s already exists.'
-                               % kwarg[username])
+                               % kwarg['UserName'])
 
-        self.users[kwarg[username]] = User(kwarg[username])
-        return user_response(kwarg[username])
+        self.users[kwarg['UserName']] = User(kwarg['UserName'])
+        return responses.user_response(kwarg['UserName'])
 
     def deactivate_mfa_device(self, kwarg):
         """Deactivate and detach MFA Device from user if device exists."""
-        user = self.users[kwarg[username]]
+        user = self.users[kwarg['UserName']]
         if kwarg['SerialNumber'] not in user.mfa_devices:
             raise client_error('DeactivateMFADevice',
                                '404',
                                'Device not found')
 
         user.mfa_devices.remove(kwarg['SerialNumber'])
-        return generic_response()
+        return responses.generic_response()
 
     def delete_access_key(self, kwarg):
         """Delete access key if access key exists."""
@@ -118,55 +115,55 @@ class AWSMock(object):
             self._access_key_not_found(kwarg['AccessKeyId'],
                                        'DeleteAccessKey')
 
-        return generic_response()
+        return responses.generic_response()
 
     def delete_group(self, kwarg):
         """Delete group if group exists."""
-        self._check_group_exists(kwarg, 'DeleteGroup')
+        self._check_group_exists(kwarg['GroupName'], 'DeleteGroup')
 
         for key, user in self.users.items():
-            if kwarg[group_name] in user.groups:
-                user.groups.remove(kwarg[group_name])
+            if kwarg['GroupName'] in user.groups:
+                user.groups.remove(kwarg['GroupName'])
 
-        self.groups.pop(kwarg[group_name], None)
-        return generic_response()
+        self.groups.pop(kwarg['GroupName'], None)
+        return responses.generic_response()
 
     def delete_login_profile(self, kwarg):
         """Delete login profile (password) from user if users has password."""
-        user = self.users[kwarg[username]]
-        if not user.password:
-            raise client_error('DeleteLoginProfile',
-                               '404',
-                               'LoginProfile for %s not found' % user.username)
+        self._check_user_exists(kwarg['UserName'], 'DeleteLoginProfile')
 
-        user.password = None
-        return generic_response()
+        user = self.users[kwarg['UserName']]
+        if not user.login_profile:
+            self._login_profile_not_found(user.username, 'DeleteLoginProfile')
+
+        user.delete_login_profile()
+        return responses.generic_response()
 
     def delete_signing_certificate(self, kwarg):
         """Delete signing cert if cert exists."""
-        user = self.users[kwarg[username]]
+        user = self.users[kwarg['UserName']]
         if kwarg['CertificateId'] not in user.signing_certs:
             raise client_error('DeleteSigningCertificate',
                                '404',
                                'Signing certificate not found')
 
         user.signing_certs.remove(kwarg['CertificateId'])
-        return generic_response()
+        return responses.generic_response()
 
     def delete_user(self, kwarg):
         """Delete user if user exists."""
-        self._check_user_exists(kwarg, 'DeleteUser')
+        self._check_user_exists(kwarg['UserName'], 'DeleteUser')
 
         for group in self.groups:
-            if kwarg[username] in group.users:
-                group.users.remove(kwarg[username])
+            if kwarg['UserName'] in group.users:
+                group.users.remove(kwarg['UserName'])
 
-        self.users.pop(kwarg[username], None)
-        return generic_response()
+        self.users.pop(kwarg['UserName'], None)
+        return responses.generic_response()
 
     def detach_user_policy(self, kwarg):
         """Detach user policy if policy exists."""
-        user = self.users[kwarg[username]]
+        user = self.users[kwarg['UserName']]
         policy = kwarg['PolicyArn'].split('/')[1]
 
         if policy not in user.attached_policies:
@@ -175,71 +172,90 @@ class AWSMock(object):
                                'Attached policy not found')
 
         user.attached_policies.remove(policy)
-        return generic_response()
+        return responses.generic_response()
+
+    def get_access_key_last_used(self, kwarg):
+        try:
+            access_key = self.access_keys.get(kwarg['AccessKeyId'])
+        except KeyError:
+            self._access_key_not_found(kwarg['AccessKeyId'],
+                                       'GetAccessKeyLastUsed')
+
+        return responses.access_key_last_used_response(access_key)
+
+    def get_login_profile(self, kwarg):
+        """Get login profile (password) for user if users has password."""
+        self._check_user_exists(kwarg['UserName'], 'GetLoginProfile')
+
+        user = self.users[kwarg['UserName']]
+        if not user.login_profile:
+            self._login_profile_not_found(user.username, 'GetLoginProfile')
+
+        return responses.login_profile_response(user)
 
     def get_user(self, kwarg):
         """Get user if user exists."""
-        self._check_user_exists(kwarg, 'GetUser')
+        self._check_user_exists(kwarg['UserName'], 'GetUser')
 
-        return user_response(kwarg[username])
+        return responses.user_response(kwarg['UserName'])
 
     def list_access_keys(self, kwarg):
         """List all of the users access keys if user exists."""
-        self._check_user_exists(kwarg, 'ListAccessKeys')
+        self._check_user_exists(kwarg['UserName'], 'ListAccessKeys')
 
         keys = dict((access_key.id, access_key) for key, access_key
                     in self.access_keys.items()
-                    if access_key.username == kwarg[username])
-        return list_access_keys_response(keys)
+                    if access_key.username == kwarg['UserName'])
+        return responses.list_access_keys_response(keys)
 
     def list_attached_user_policies(self, kwarg):
         """List all of the users attached policies if user exists."""
-        self._check_user_exists(kwarg, 'ListAttachedUserPolicies')
+        self._check_user_exists(kwarg['UserName'], 'ListAttachedUserPolicies')
 
-        policies = self.users[kwarg[username]].attached_policies
-        return list_attached_policies_response(policies)
+        policies = self.users[kwarg['UserName']].attached_policies
+        return responses.list_attached_policies_response(policies)
 
     def list_groups(self, kwarg):
         """List all groups"""
-        return list_groups_response(self.groups)
+        return responses.list_groups_response(self.groups)
 
     def list_groups_for_user(self, kwarg):
         """List all of the users groups if user exists."""
-        self._check_user_exists(kwarg, 'ListGroupsForUser')
+        self._check_user_exists(kwarg['UserName'], 'ListGroupsForUser')
 
         groups = [self.groups[name] for name in
-                  self.users[kwarg[username]].groups]
-        return list_groups_for_user_response(groups)
+                  self.users[kwarg['UserName']].groups]
+        return responses.list_groups_for_user_response(groups)
 
     def list_mfa_devices(self, kwarg):
         """List all of the users MFA devices if user exists."""
-        self._check_user_exists(kwarg, 'ListMFADevices')
+        self._check_user_exists(kwarg['UserName'], 'ListMFADevices')
 
-        devices = self.users[kwarg[username]].mfa_devices
-        return list_mfa_devices_response(kwarg[username], devices)
+        devices = self.users[kwarg['UserName']].mfa_devices
+        return responses.list_mfa_devices_response(kwarg['UserName'], devices)
 
     def list_signing_certificates(self, kwarg):
         """List all of the users signing certs if the user exists."""
         self._check_user_exists(kwarg, 'ListSigningCertificates')
 
-        certs = self.users[kwarg[username]].signing_certs
-        return list_signing_certs_response(kwarg[username], certs)
+        certs = self.users[kwarg['UserName']].signing_certs
+        return responses.list_signing_certs_response(kwarg['UserName'], certs)
 
     def list_users(self, kwarg):
         """List all users."""
-        return list_users_response(self.users)
+        return responses.list_users_response(self.users)
 
     def remove_user_from_group(self, kwarg):
         """Remove user from group if user exists."""
-        self._check_user_exists(kwarg, 'RemoveUserFromGroup')
-        self._check_group_exists(kwarg, 'RemoveUserFromGroup')
+        self._check_user_exists(kwarg['UserName'], 'RemoveUserFromGroup')
+        self._check_group_exists(kwarg['GroupName'], 'RemoveUserFromGroup')
 
-        group = self.groups[kwarg[group_name]]
-        user = self.users[kwarg[username]]
+        group = self.groups[kwarg['GroupName']]
+        user = self.users[kwarg['UserName']]
 
-        group.users.remove(kwarg[username])
-        user.groups.remove(kwarg[group_name])
-        return generic_response()
+        group.users.remove(kwarg['UserName'])
+        user.groups.remove(kwarg['GroupName'])
+        return responses.generic_response()
 
     def update_access_key(self, kwarg):
         try:
@@ -249,25 +265,39 @@ class AWSMock(object):
                                        'UpdateAccessKey')
 
         access_key.status = kwarg['Status']
-        return generic_response()
+        return responses.generic_response()
 
-    def _check_user_exists(self, kwarg, method):
+    def update_login_profile(self, kwarg):
+        """Update login profile for user."""
+        self._check_user_exists(kwarg['UserName'], 'UpdateLoginProfile')
+
+        user = self.users[kwarg['UserName']]
+        if not user.login_profile:
+            self._login_profile_not_found(user.username, 'UpdateLoginProfile')
+
+        reset_required = kwarg.get('PasswordResetRequired', None)
+        password = kwarg.get('Password', None)
+        user.update_login_profile(password=password,
+                                  reset_required=reset_required)
+        return responses.generic_response()
+
+    def _check_user_exists(self, user, method):
         try:
-            self.users[kwarg[username]]
+            self.users[user]
         except KeyError:
             raise client_error(method,
                                'NoSuchEntity',
                                'The user with name %s cannot be found.'
-                               % kwarg[username])
+                               % user)
 
-    def _check_group_exists(self, kwarg, method):
+    def _check_group_exists(self, group, method):
         try:
-            self.groups[kwarg[group_name]]
+            self.groups[group]
         except KeyError:
             raise client_error(method,
                                'NoSuchEntity',
                                'The group with name %s cannot be found.'
-                               % kwarg[group_name])
+                               % group)
 
     @staticmethod
     def _access_key_not_found(access_key_id, method):
@@ -276,11 +306,18 @@ class AWSMock(object):
                            'The Access Key with id %s cannot be found.'
                            % access_key_id)
 
+    @staticmethod
+    def _login_profile_not_found(user, method):
+        raise client_error(method,
+                           'NoSuchEntity',
+                           'LoginProfile for user with name %s'
+                           ' cannot be found.' % user)
+
 
 def mock_iam(test):
     @wraps(test)
     def wrapper(*args, **kwargs):
-        mocker = AWSMock()
+        mocker = MockIam()
         with patch('botocore.client.BaseClient._make_api_call',
                    new=mocker.mock_make_api_call):
             test(*args, **kwargs)

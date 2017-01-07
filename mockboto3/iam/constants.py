@@ -2,8 +2,6 @@
 
 """"Constants."""
 
-username = 'UserName'
-group_name = 'GroupName'
 signing_cert = '-----BEGIN CERTIFICATE-----' \
     'MIICdzCCAeCgAwIBAgIGANc+Ha2wMA0GCSqGSIb3DQEBBQUAMFMxCzAJBgNVBAYT' \
     'AlVTMRMwEQYDVQQKEwpBbWF6b24uY29tMQwwCgYDVQQLEwNBV1MxITAfBgNVBAMT' \

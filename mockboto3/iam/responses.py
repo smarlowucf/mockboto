@@ -45,6 +45,19 @@ def access_key_response(access_key):
     return parsed_response
 
 
+def access_key_last_used_response(access_key):
+    """Response for create/get access key."""
+    now, now_str = get_time_now()
+    parsed_response = response_metadata(now_str)
+    parsed_response['AccessKeyLastUsed'] = {
+        'Region': access_key.last_used.region,
+        'LastUsedDate': access_key.last_used.date,
+        'ServiceName': access_key.last_used.service_name
+    }
+    parsed_response['UserName'] = access_key.username
+    return parsed_response
+
+
 def generic_response():
     """Generic response for deletion endpoints."""
     now, now_str = get_time_now()
@@ -157,15 +170,18 @@ def list_users_response(users):
     return parsed_response
 
 
-def login_profile_response(username):
+def login_profile_response(user, create=False):
     """Response for list user login profiles."""
     now, now_str = get_time_now()
     parsed_response = response_metadata(now_str)
     parsed_response['LoginProfile'] = {
-        'CreateDate': now,
-        'PasswordResetRequired': False,
-        'UserName': username
+        'CreateDate': user.login_profile.create_date,
+        'UserName': user.username
     }
+
+    if create:
+        parsed_response['LoginProfile']['PasswordResetRequired'] = \
+            user.login_profile.reset_required
     return parsed_response
 
 
