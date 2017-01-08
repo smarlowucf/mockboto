@@ -66,6 +66,17 @@ class MFADevice(object):
         self.serial_number = serial_number
 
 
+class SigningCertificate(object):
+    """Signing certificate class."""
+
+    def __init__(self, body):
+        super(SigningCertificate, self).__init__()
+        self.id = get_random_string(length=24)
+        self.body = body
+        self.status = 'Active'
+        self.upload_date = datetime.now(timezone.utc)
+
+
 class User(object):
     """User class used for mocking AWS backend user objects."""
 
@@ -78,7 +89,7 @@ class User(object):
         self.login_profile = None
         self.mfa_devices = {}
         self.password_last_used = None
-        self.signing_certs = []
+        self.signing_certs = {}
         self.username = user_name
 
     def add_group(self, group):
@@ -93,6 +104,9 @@ class User(object):
     def delete_login_profile(self):
         self.login_profile = None
 
+    def delete_signing_certificate(self, cert_id):
+        self.signing_certs.pop(cert_id)
+
     def enable_mfa_device(self, serial_number):
         self.mfa_devices[serial_number] = MFADevice(serial_number)
 
@@ -104,3 +118,11 @@ class User(object):
             self.login_profile.password = password
         if reset_required is not None:
             self.login_profile.reset_required = reset_required
+
+    def update_signing_certificate(self, cert_id, status):
+        self.signing_certs.get(cert_id).status = status
+
+    def upload_signing_certificate(self, body):
+        certificate = SigningCertificate(body)
+        self.signing_certs[certificate.id] = certificate
+        return certificate

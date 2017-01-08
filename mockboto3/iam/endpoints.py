@@ -158,13 +158,13 @@ class MockIam(object):
 
     def delete_signing_certificate(self, kwarg):
         """Delete signing cert if cert exists."""
-        user = self.users[kwarg['UserName']]
-        if kwarg['CertificateId'] not in user.signing_certs:
-            raise client_error('DeleteSigningCertificate',
-                               '404',
-                               'Signing certificate not found')
+        self._check_user_exists(kwarg['UserName'], 'DeleteSigningCertificate')
+        self._check_signing_certificate_exists(kwarg['UserName'],
+                                               kwarg['CertificateId'],
+                                               'DeleteSigningCertificate')
 
-        user.signing_certs.remove(kwarg['CertificateId'])
+        user = self.users[kwarg['UserName']]
+        user.delete_signing_certificate(kwarg['CertificateId'])
         return responses.generic_response()
 
     def delete_user(self, kwarg):
@@ -253,7 +253,7 @@ class MockIam(object):
 
     def list_signing_certificates(self, kwarg):
         """List all of the users signing certs if the user exists."""
-        self._check_user_exists(kwarg, 'ListSigningCertificates')
+        self._check_user_exists(kwarg['UserName'], 'ListSigningCertificates')
 
         certs = self.users[kwarg['UserName']].signing_certs
         return responses.list_signing_certs_response(kwarg['UserName'], certs)
@@ -298,6 +298,32 @@ class MockIam(object):
                                   reset_required=reset_required)
         return responses.generic_response()
 
+    def update_signing_certificate(self, kwarg):
+        """Update signing certificate status."""
+        self._check_user_exists(kwarg['UserName'], 'UpdateSigningCertificate')
+        self._check_signing_certificate_exists(kwarg['UserName'],
+                                               kwarg['CertificateId'],
+                                               'UpdateSigningCertificate')
+
+        user = self.users[kwarg['UserName']]
+        user.update_signing_certificate(kwarg['CertificateId'],
+                                        kwarg['Status'])
+        return responses.generic_response()
+
+    def upload_signing_certificate(self, kwarg):
+        self._check_user_exists(kwarg['UserName'], 'UploadSigningCertificate')
+
+        user = self.users[kwarg['UserName']]
+        for key, cert in user.signing_certs.items():
+            if kwarg['CertificateBody'] == cert.body:
+                raise client_error('UploadSigningCertificate',
+                                   'DuplicateCertificate',
+                                   'A duplicate certificate already exists.')
+
+        cert = user.upload_signing_certificate(kwarg['CertificateBody'])
+        return responses.upload_signing_certificate_response(kwarg['UserName'],
+                                                             cert)
+
     def _check_user_exists(self, user, method):
         try:
             self.users[user]
@@ -315,6 +341,15 @@ class MockIam(object):
                                'NoSuchEntity',
                                'The group with name %s cannot be found.'
                                % group)
+
+    def _check_signing_certificate_exists(self, user, cert_id, method):
+        try:
+            self.users[user].signing_certs[cert_id]
+        except KeyError:
+            raise client_error(method,
+                               'NoSuchEntity',
+                               'The signing certificate with certificate id '
+                               '%s cannot be found.' % cert_id)
 
     @staticmethod
     def _access_key_not_found(access_key_id, method):

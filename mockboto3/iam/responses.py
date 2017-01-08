@@ -4,8 +4,6 @@
 
 from datetime import datetime, timezone
 
-from .constants import signing_cert
-
 
 def get_time_now():
     """Return the time as a datetime object and string."""
@@ -148,9 +146,12 @@ def list_signing_certs_response(username, certs):
     now, now_str = get_time_now()
     parsed_response = response_metadata(now_str)
     parsed_response['IsTruncated'] = False
-    certs_response = [{'UserName': username,
-                       'CertificateId': cert,
-                       'CertificateBody': signing_cert} for cert in certs]
+    certs_response = [
+        {'UserName': username,
+         'CertificateId': cert.id,
+         'CertificateBody': cert.body,
+         'Status': cert.status
+         } for key, cert in certs.items()]
     parsed_response['Certificates'] = certs_response
     return parsed_response
 
@@ -184,6 +185,19 @@ def login_profile_response(user, create=False):
     if create:
         parsed_response['LoginProfile']['PasswordResetRequired'] = \
             user.login_profile.reset_required
+    return parsed_response
+
+
+def upload_signing_certificate_response(username, cert):
+    """Response for upload signing certificate."""
+    now, now_str = get_time_now()
+    parsed_response = response_metadata(now_str)
+    parsed_response['Certificate'] = {
+        'UserName': username,
+        'CertificateId': cert.id,
+        'CertificateBody': cert.body,
+        'Status': cert.status
+    }
     return parsed_response
 
 

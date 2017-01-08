@@ -4,9 +4,10 @@
 import boto3
 
 from mockboto3.core.exceptions import MockBoto3ClientError
+from mockboto3.iam.constants import signing_cert
 from mockboto3.iam.endpoints import MockIam, mock_iam
 
-from nose.tools import assert_equal, assert_is_not_none, assert_true
+from nose.tools import assert_equal, assert_is_not_none
 
 
 class TestIam:
@@ -444,3 +445,80 @@ class TestMfaDevice:
         # Confirm deactivation
         response = self.client.list_mfa_devices(UserName=self.user)
         assert_equal(0, len(response['MFADevices']))
+
+
+class TestSigningCertificates:
+
+    @classmethod
+    def setup_class(cls):
+        cls.client = boto3.client('iam')
+        cls.user = 'John'
+
+    @mock_iam
+    def test_delete_signing_cert_exception(self):
+        """Test delete non existent signing cert raises exception."""
+        msg = 'An error occurred (NoSuchEntity) when calling the ' \
+              'DeleteSigningCertificate operation: The signing certificate' \
+              ' with certificate id 44324234213 cannot be found.'
+
+        self.client.create_user(UserName=self.user)
+
+        try:
+            # Assert delete non existent signing certificate exception
+            self.client.delete_signing_certificate(
+                UserName=self.user,
+                CertificateId='44324234213'
+            )
+        except MockBoto3ClientError as e:
+            assert_equal(msg, str(e))
+
+    @mock_iam
+    def test_list_signing_certificates_exception(self):
+        """Test list signing certs for non existent user raises exception."""
+        msg = 'An error occurred (NoSuchEntity) when calling the ' \
+              'ListSigningCertificates operation: The user with name' \
+              ' John cannot be found.'
+
+        try:
+            # Assert list signing certs for non existent user exception
+            self.client.list_signing_certificates(UserName=self.user)
+        except MockBoto3ClientError as e:
+            assert_equal(msg, str(e))
+
+    @mock_iam
+    def test_signing_certificate(self):
+        """Test signing certificate endpoints."""
+        self.client.create_user(UserName=self.user)
+
+        # Add signing cert
+        response = self.client.upload_signing_certificate(
+            UserName=self.user,
+            CertificateBody=signing_cert
+        )
+
+        # Get cert id
+        cert_id = response['Certificate']['CertificateId']
+
+        # Lists signing certs for user
+        response = self.client.list_signing_certificates(UserName=self.user)
+
+        assert_equal(cert_id,
+                     response['Certificates'][0]['CertificateId'])
+        assert_equal(1, len(response['Certificates']))
+
+        # Update certificate status
+        self.client.update_signing_certificate(UserName=self.user,
+                                               CertificateId=cert_id,
+                                               Status='Inactive')
+        response = self.client.list_signing_certificates(UserName=self.user)
+
+        assert_equal('Inactive',
+                     response['Certificates'][0]['Status'])
+
+        # Delete signing cert
+        self.client.delete_signing_certificate(UserName=self.user,
+                                               CertificateId=cert_id)
+
+        # Confirm deletion
+        response = self.client.list_signing_certificates(UserName=self.user)
+        assert_equal(0, len(response['Certificates']))
