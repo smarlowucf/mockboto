@@ -45,8 +45,8 @@ class MockIam(object):
         user = self.users[kwarg['UserName']]
         group = self.groups[kwarg['GroupName']]
 
-        group.users.append(user.username)
-        user.groups.append(group.name)
+        group.add_user(user.username)
+        user.add_group(group.name)
         return responses.user_group_response()
 
     def create_access_key(self, kwarg):
@@ -96,15 +96,32 @@ class MockIam(object):
         self.users[kwarg['UserName']] = User(kwarg['UserName'])
         return responses.user_response(kwarg['UserName'])
 
+    def enable_mfa_device(self, kwarg):
+        """Enable MFA Device for user."""
+        self._check_user_exists(kwarg['UserName'], 'EnableMFADevice')
+
+        user = self.users[kwarg['UserName']]
+        if kwarg['SerialNumber'] in user.mfa_devices:
+            raise client_error('EnableMFADevice',
+                               'EntityAlreadyExists',
+                               'Device with serial number %s already '
+                               'exists.' % kwarg['SerialNumber'])
+
+        user.enable_mfa_device(kwarg['SerialNumber'])
+        return responses.generic_response()
+
     def deactivate_mfa_device(self, kwarg):
         """Deactivate and detach MFA Device from user if device exists."""
+        self._check_user_exists(kwarg['UserName'], 'DeactivateMFADevice')
+
         user = self.users[kwarg['UserName']]
         if kwarg['SerialNumber'] not in user.mfa_devices:
             raise client_error('DeactivateMFADevice',
-                               '404',
-                               'Device not found')
+                               'NoSuchEntity',
+                               'Device with serial number %s cannot '
+                               'be found.' % kwarg['SerialNumber'])
 
-        user.mfa_devices.remove(kwarg['SerialNumber'])
+        user.deactivate_mfa_device(kwarg['SerialNumber'])
         return responses.generic_response()
 
     def delete_access_key(self, kwarg):
@@ -123,7 +140,7 @@ class MockIam(object):
 
         for key, user in self.users.items():
             if kwarg['GroupName'] in user.groups:
-                user.groups.remove(kwarg['GroupName'])
+                user.remove_group(kwarg['GroupName'])
 
         self.groups.pop(kwarg['GroupName'], None)
         return responses.generic_response()
@@ -156,7 +173,7 @@ class MockIam(object):
 
         for group in self.groups:
             if kwarg['UserName'] in group.users:
-                group.users.remove(kwarg['UserName'])
+                group.remove_user(kwarg['UserName'])
 
         self.users.pop(kwarg['UserName'], None)
         return responses.generic_response()
@@ -253,8 +270,8 @@ class MockIam(object):
         group = self.groups[kwarg['GroupName']]
         user = self.users[kwarg['UserName']]
 
-        group.users.remove(kwarg['UserName'])
-        user.groups.remove(kwarg['GroupName'])
+        group.remove_user(kwarg['UserName'])
+        user.remove_group(kwarg['GroupName'])
         return responses.generic_response()
 
     def update_access_key(self, kwarg):

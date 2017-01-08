@@ -381,3 +381,66 @@ class TestLoginProfile:
             self.client.get_login_profile(UserName=self.user)
         except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
+
+
+class TestMfaDevice:
+
+    @classmethod
+    def setup_class(cls):
+        cls.client = boto3.client('iam')
+        cls.user = 'John'
+
+    @mock_iam
+    def test_deactivate_mfa_device_exception(self):
+        """Test deactivate non existent mfa device raises exception."""
+        msg = 'An error occurred (NoSuchEntity) when calling the ' \
+              'DeactivateMFADevice operation: Device with serial ' \
+              'number 44324234213 cannot be found.'
+
+        self.client.create_user(UserName=self.user)
+
+        try:
+            # Assert deactivate non existent mfa device exception
+            self.client.deactivate_mfa_device(UserName=self.user,
+                                              SerialNumber='44324234213')
+        except MockBoto3ClientError as e:
+            assert_equal(msg, str(e))
+
+    @mock_iam
+    def test_list_mfa_device_exception(self):
+        """Test list mfa devices for non existent user raises exception."""
+        msg = 'An error occurred (NoSuchEntity) when calling the ' \
+              'ListMFADevices operation: The user with name John ' \
+              'cannot be found.'
+
+        try:
+            # Assert list mfa devices for non existent user exception
+            self.client.list_mfa_devices(UserName=self.user)
+        except MockBoto3ClientError as e:
+            assert_equal(msg, str(e))
+
+    @mock_iam
+    def test_mfa_device(self):
+        """Test mfa device endpoints."""
+        self.client.create_user(UserName=self.user)
+
+        # Enable mfa device
+        self.client.enable_mfa_device(UserName=self.user,
+                                      SerialNumber='44324234213',
+                                      AuthenticationCode1='123456',
+                                      AuthenticationCode2='654321')
+
+        # List mfa devices
+        response = self.client.list_mfa_devices(UserName=self.user)
+
+        assert_equal('44324234213',
+                     response['MFADevices'][0]['SerialNumber'])
+        assert_equal(1, len(response['MFADevices']))
+
+        # Deactivate mfa device
+        self.client.deactivate_mfa_device(UserName=self.user,
+                                          SerialNumber='44324234213')
+
+        # Confirm deactivation
+        response = self.client.list_mfa_devices(UserName=self.user)
+        assert_equal(0, len(response['MFADevices']))

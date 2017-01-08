@@ -40,6 +40,12 @@ class Group(object):
         self.name = name
         self.users = []
 
+    def add_user(self, user):
+        self.users.append(user)
+
+    def remove_user(self, user):
+        self.users.remove(user)
+
 
 class LoginProfile(object):
     """Login profile (password) for AWS User."""
@@ -49,6 +55,15 @@ class LoginProfile(object):
         self.password = password
         self.create_date = datetime.now(timezone.utc)
         self.reset_required = reset_required
+
+
+class MFADevice(object):
+    """MFA Device class."""
+
+    def __init__(self, serial_number):
+        super(MFADevice, self).__init__()
+        self.enable_date = datetime.now(timezone.utc)
+        self.serial_number = serial_number
 
 
 class User(object):
@@ -61,16 +76,28 @@ class User(object):
         self.create_date = datetime.now(timezone.utc)
         self.groups = []
         self.login_profile = None
-        self.mfa_devices = []
+        self.mfa_devices = {}
         self.password_last_used = None
         self.signing_certs = []
         self.username = user_name
 
+    def add_group(self, group):
+        self.groups.append(group)
+
     def create_login_profile(self, password, reset_required=False):
         self.login_profile = LoginProfile(password, reset_required)
 
+    def deactivate_mfa_device(self, serial_number):
+        self.mfa_devices.pop(serial_number)
+
     def delete_login_profile(self):
         self.login_profile = None
+
+    def enable_mfa_device(self, serial_number):
+        self.mfa_devices[serial_number] = MFADevice(serial_number)
+
+    def remove_group(self, group):
+        self.groups.remove(group)
 
     def update_login_profile(self, password=None, reset_required=None):
         if password:

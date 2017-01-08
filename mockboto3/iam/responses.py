@@ -135,8 +135,10 @@ def list_mfa_devices_response(username, devices):
     now, now_str = get_time_now()
     parsed_response = response_metadata(now_str)
     parsed_response['IsTruncated'] = False
-    devices_response = [{'SerialNumber': device,
-                         'UserName': username} for device in devices]
+    devices_response = [
+        {'SerialNumber': device.serial_number,
+         'UserName': username
+         } for key, device in devices.items()]
     parsed_response['MFADevices'] = devices_response
     return parsed_response
 
