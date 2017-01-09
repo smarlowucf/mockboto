@@ -9,7 +9,8 @@ from mockboto3.core.exceptions import client_error
 from mockboto3.core.utils import inflection
 
 from mockboto3.iam import responses
-from mockboto3.iam.models import AccessKey, Group, User
+from mockboto3.iam.models import AccessKey, Group, Policy, User
+from mockboto3.iam.utils import get_value_from_arn
 
 
 class MockIam(object):
@@ -21,6 +22,7 @@ class MockIam(object):
         self.access_keys = {}
         self.groups = {}
         self.users = {}
+        self.policies = {}
 
     def mock_make_api_call(self, operation_name, kwarg):
         """Entry point for mocking AWS endpoints.
@@ -49,6 +51,17 @@ class MockIam(object):
         user.add_group(group.name)
         return responses.user_group_response()
 
+    def attach_user_policy(self, kwarg):
+        self._check_user_exists(kwarg['UserName'], 'AttachUserPolicy')
+        user = self.users[kwarg['UserName']]
+
+        policy_name = get_value_from_arn(kwarg['PolicyArn'])
+        policy = self._check_policy_exists(policy_name, 'AttachUserPolicy')
+
+        user.attach_policy(policy_name)
+        policy.attach_user(user.username)
+        return responses.generic_response()
+
     def create_access_key(self, kwarg):
         """Create access key for user if user exists."""
         self._check_user_exists(kwarg['UserName'], 'CreateAccessKey')
@@ -67,7 +80,7 @@ class MockIam(object):
 
         group = Group(kwarg['GroupName'])
         self.groups[group.name] = group
-        return responses.group_response(group.name, group.id)
+        return responses.group_response(group)
 
     def create_login_profile(self, kwarg):
         """Create login profile for user if user has no password."""
@@ -84,6 +97,21 @@ class MockIam(object):
         user.create_login_profile(kwarg['Password'],
                                   reset_required=reset_required)
         return responses.login_profile_response(user, create=True)
+
+    def create_policy(self, kwarg):
+        """Create policy given policy document."""
+        if kwarg['PolicyName'] in self.policies:
+            raise client_error('CreatePolicy',
+                               'EntityAlreadyExists',
+                               'Policy with name %s already'
+                               'exists.' % kwarg['PolicyName'])
+
+        policy = Policy(kwarg.get('PolicyName'),
+                        kwarg.get('PolicyDocument'),
+                        kwarg.get('Description', None),
+                        kwarg.get('Path', None))
+        self.policies[policy.name] = policy
+        return responses.create_policy_response(policy)
 
     def create_user(self, kwarg):
         """Create user if user does not exist."""
@@ -150,8 +178,7 @@ class MockIam(object):
         self._check_user_exists(kwarg['UserName'], 'DeleteLoginProfile')
 
         user = self.users[kwarg['UserName']]
-        if not user.login_profile:
-            self._login_profile_not_found(user.username, 'DeleteLoginProfile')
+        self._check_login_profile_exists(user, 'DeleteLoginProfile')
 
         user.delete_login_profile()
         return responses.generic_response()
@@ -180,15 +207,15 @@ class MockIam(object):
 
     def detach_user_policy(self, kwarg):
         """Detach user policy if policy exists."""
+        self._check_user_exists(kwarg['UserName'], 'DetachUserPolicy')
         user = self.users[kwarg['UserName']]
-        policy = kwarg['PolicyArn'].split('/')[1]
 
-        if policy not in user.attached_policies:
-            raise client_error('DetachUserPolicy',
-                               '404',
-                               'Attached policy not found')
+        policy_name = get_value_from_arn(kwarg['PolicyArn'])
+        self._check_user_has_policy(policy_name, user, 'DetachUserPolicy')
+        policy = self._check_policy_exists(policy_name, 'DetachUserPolicy')
 
-        user.attached_policies.remove(policy)
+        user.detach_policy(policy_name)
+        policy.detach_user(user.username)
         return responses.generic_response()
 
     def get_access_key_last_used(self, kwarg):
@@ -205,8 +232,7 @@ class MockIam(object):
         self._check_user_exists(kwarg['UserName'], 'GetLoginProfile')
 
         user = self.users[kwarg['UserName']]
-        if not user.login_profile:
-            self._login_profile_not_found(user.username, 'GetLoginProfile')
+        self._check_login_profile_exists(user, 'GetLoginProfile')
 
         return responses.login_profile_response(user)
 
@@ -215,6 +241,17 @@ class MockIam(object):
         self._check_user_exists(kwarg['UserName'], 'GetUser')
 
         return responses.user_response(kwarg['UserName'])
+
+    def get_user_policy(self, kwarg):
+        """Get attached policy for user."""
+        self._check_user_exists(kwarg['UserName'], 'GetUserPolicy')
+        user = self.users[kwarg['UserName']]
+
+        policy_name = get_value_from_arn(kwarg['PolicyArn'])
+        self._check_user_has_policy(policy_name, user, 'GetUserPolicy')
+        policy = self._check_policy_exists(policy_name, 'GetUserPolicy')
+
+        return responses.get_user_policy_response(policy, user.username)
 
     def list_access_keys(self, kwarg):
         """List all of the users access keys if user exists."""
@@ -229,8 +266,9 @@ class MockIam(object):
         """List all of the users attached policies if user exists."""
         self._check_user_exists(kwarg['UserName'], 'ListAttachedUserPolicies')
 
-        policies = self.users[kwarg['UserName']].attached_policies
-        return responses.list_attached_policies_response(policies)
+        policy_names = self.users[kwarg['UserName']].attached_policies
+        policies = [self.policies[name] for name in policy_names]
+        return responses.list_attached_user_policies_response(policies)
 
     def list_groups(self, kwarg):
         """List all groups"""
@@ -289,8 +327,7 @@ class MockIam(object):
         self._check_user_exists(kwarg['UserName'], 'UpdateLoginProfile')
 
         user = self.users[kwarg['UserName']]
-        if not user.login_profile:
-            self._login_profile_not_found(user.username, 'UpdateLoginProfile')
+        self._check_login_profile_exists(user, 'UpdateLoginProfile')
 
         reset_required = kwarg.get('PasswordResetRequired', None)
         password = kwarg.get('Password', None)
@@ -342,6 +379,17 @@ class MockIam(object):
                                'The group with name %s cannot be found.'
                                % group)
 
+    def _check_policy_exists(self, policy_name, method):
+        try:
+            policy = self.policies[policy_name]
+        except KeyError:
+            raise client_error(method,
+                               'NoSuchEntity',
+                               'The policy with name %s '
+                               'cannot be found.' % policy_name)
+
+        return policy
+
     def _check_signing_certificate_exists(self, user, cert_id, method):
         try:
             self.users[user].signing_certs[cert_id]
@@ -359,11 +407,21 @@ class MockIam(object):
                            % access_key_id)
 
     @staticmethod
-    def _login_profile_not_found(user, method):
-        raise client_error(method,
-                           'NoSuchEntity',
-                           'LoginProfile for user with name %s'
-                           ' cannot be found.' % user)
+    def _check_login_profile_exists(user, method):
+        if not user.login_profile:
+            raise client_error(method,
+                               'NoSuchEntity',
+                               'LoginProfile for user with name %s'
+                               ' cannot be found.' % user.username)
+
+    @staticmethod
+    def _check_user_has_policy(policy, user, method):
+        if policy not in user.attached_policies:
+            raise client_error(method,
+                               'NoSuchEntity',
+                               'The policy with name %s '
+                               'is not attached to the user with name '
+                               '%s.' % (policy, user.username))
 
 
 def mock_iam(test):

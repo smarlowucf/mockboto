@@ -7,7 +7,7 @@ chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
 
 def get_random_string(length=12, allowed_chars=chars):
-    return ''.join(random.choice(allowed_chars) for i in range(length))
+    return ''.join(random.choice(allowed_chars) for _ in range(length))
 
 
 def inflection(name):

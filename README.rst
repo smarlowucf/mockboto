@@ -18,7 +18,7 @@ mockboto3
      :alt: Updates
 
 
-Python package for mocking out the boto3 library.
+Python package for mocking the boto3 library.
 
 
 * Free software: MIT license

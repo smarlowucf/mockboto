@@ -4,7 +4,7 @@
 import boto3
 
 from mockboto3.core.exceptions import MockBoto3ClientError
-from mockboto3.iam.constants import signing_cert
+from mockboto3.iam.constants import policy_document, signing_cert
 from mockboto3.iam.endpoints import MockIam, mock_iam
 
 from nose.tools import assert_equal, assert_is_not_none
@@ -314,6 +314,7 @@ class TestLoginProfile:
     @classmethod
     def setup_class(cls):
         cls.client = boto3.client('iam')
+        cls.password = 'password'
         cls.user = 'John'
 
     @mock_iam
@@ -327,12 +328,12 @@ class TestLoginProfile:
 
         # Create login profile
         self.client.create_login_profile(UserName=self.user,
-                                         Password='Password')
+                                         Password=self.password)
 
         try:
             # Assert create login profile already exists exception
             self.client.create_login_profile(UserName=self.user,
-                                             Password='Password')
+                                             Password=self.password)
         except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
@@ -357,8 +358,10 @@ class TestLoginProfile:
         self.client.create_user(UserName=self.user)
 
         # Create login profile
-        response = self.client.create_login_profile(UserName=self.user,
-                                                    Password='Password')
+        response = self.client.create_login_profile(
+            UserName=self.user,
+            Password=self.password
+        )
 
         assert_equal(self.user,
                      response['LoginProfile']['UserName'])
@@ -389,6 +392,7 @@ class TestMfaDevice:
     @classmethod
     def setup_class(cls):
         cls.client = boto3.client('iam')
+        cls.serial_number = '44324234213'
         cls.user = 'John'
 
     @mock_iam
@@ -403,7 +407,7 @@ class TestMfaDevice:
         try:
             # Assert deactivate non existent mfa device exception
             self.client.deactivate_mfa_device(UserName=self.user,
-                                              SerialNumber='44324234213')
+                                              SerialNumber=self.serial_number)
         except MockBoto3ClientError as e:
             assert_equal(msg, str(e))
 
@@ -427,20 +431,20 @@ class TestMfaDevice:
 
         # Enable mfa device
         self.client.enable_mfa_device(UserName=self.user,
-                                      SerialNumber='44324234213',
+                                      SerialNumber=self.serial_number,
                                       AuthenticationCode1='123456',
                                       AuthenticationCode2='654321')
 
         # List mfa devices
         response = self.client.list_mfa_devices(UserName=self.user)
 
-        assert_equal('44324234213',
+        assert_equal(self.serial_number,
                      response['MFADevices'][0]['SerialNumber'])
         assert_equal(1, len(response['MFADevices']))
 
         # Deactivate mfa device
         self.client.deactivate_mfa_device(UserName=self.user,
-                                          SerialNumber='44324234213')
+                                          SerialNumber=self.serial_number)
 
         # Confirm deactivation
         response = self.client.list_mfa_devices(UserName=self.user)
@@ -522,3 +526,71 @@ class TestSigningCertificates:
         # Confirm deletion
         response = self.client.list_signing_certificates(UserName=self.user)
         assert_equal(0, len(response['Certificates']))
+
+
+class TestUserPolicy:
+
+    @classmethod
+    def setup_class(cls):
+        cls.client = boto3.client('iam')
+        cls.policy = 'arn:aws:iam::aws:policy/Admins'
+        cls.user = 'John'
+    
+    @mock_iam
+    def test_detach_user_policy_exception(self):
+        """Test detach non existent user policy raises exception."""
+        msg = 'An error occurred (NoSuchEntity) when calling the ' \
+              'DetachUserPolicy operation: The policy with' \
+              ' name Admins is not attached to the user with name John.'
+
+        self.client.create_user(UserName=self.user)
+
+        try:
+            # Assert detach non existent user policy exception
+            self.client.detach_user_policy(UserName=self.user,
+                                           PolicyArn=self.policy)
+        except MockBoto3ClientError as e:
+            assert_equal(msg, str(e))
+
+    @mock_iam
+    def test_list_attached_user_policies_exception(self):
+        """Test list user policies for non existent user raises exception."""
+        msg = 'An error occurred (NoSuchEntity) when calling the ' \
+              'ListAttachedUserPolicies operation: The user with ' \
+              'name John cannot be found.'
+
+        try:
+            # Assert list user policies for non existent user exception
+            self.client.list_attached_user_policies(UserName=self.user)
+        except MockBoto3ClientError as e:
+            assert_equal(msg, str(e))
+
+    @mock_iam
+    def test_user_policy(self):
+        """Test user policy endpoints."""
+        self.client.create_user(UserName=self.user)
+
+        # Attach user policy
+        self.client.create_policy(PolicyName='Admins',
+                                  PolicyDocument=policy_document)
+        self.client.attach_user_policy(UserName=self.user,
+                                       PolicyArn=self.policy)
+
+        # Lists attached user policies
+        response = self.client.list_attached_user_policies(
+            UserName=self.user
+        )
+
+        assert_equal('Admins',
+                     response['AttachedPolicies'][0]['PolicyName'])
+        assert_equal(1, len(response['AttachedPolicies']))
+
+        # Detach attached policy
+        self.client.detach_user_policy(UserName=self.user,
+                                       PolicyArn=self.policy)
+
+        # Confirm policy detached
+        response = self.client.list_attached_user_policies(
+            UserName=self.user
+        )
+        assert_equal(0, len(response['AttachedPolicies']))

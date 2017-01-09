@@ -2,6 +2,9 @@
 
 """"Constants."""
 
+policy_document = '{"Version":"2012-10-17","Statement":[' \
+                  '{"Effect":"Allow","Action":"*","Resource":"*"}]}'
+
 signing_cert = '-----BEGIN CERTIFICATE-----' \
     'MIICdzCCAeCgAwIBAgIGANc+Ha2wMA0GCSqGSIb3DQEBBQUAMFMxCzAJBgNVBAYT' \
     'AlVTMRMwEQYDVQQKEwpBbWF6b24uY29tMQwwCgYDVQQLEwNBV1MxITAfBgNVBAMT' \

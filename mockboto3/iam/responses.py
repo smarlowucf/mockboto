@@ -56,6 +56,23 @@ def access_key_last_used_response(access_key):
     return parsed_response
 
 
+def create_policy_response(policy):
+    """Response for create policy."""
+    now, now_str = get_time_now()
+    parsed_response = response_metadata(now_str)
+    parsed_response['Policy'] = {
+        'PolicyName': policy.name,
+        'DefaultVersionId': policy.default_version_id,
+        'PolicyId': policy.id,
+        'Path': policy.path,
+        'Arn': policy.arn,
+        'AttachmentCount': policy.attachment_count,
+        'CreateDate': policy.create_date,
+        'UpdateDate': policy.update_date
+    }
+    return parsed_response
+
+
 def generic_response():
     """Generic response for deletion endpoints."""
     now, now_str = get_time_now()
@@ -63,15 +80,25 @@ def generic_response():
     return parsed_response
 
 
-def group_response(group_name, group_id):
+def get_user_policy_response(policy, username):
+    """Response for get attached policy for user endpoint."""
+    now, now_str = get_time_now()
+    parsed_response = response_metadata(now_str)
+    parsed_response['UserName'] = username
+    parsed_response['PolicyName'] = policy.name
+    parsed_response['PolicyDocument'] = policy.document
+    return parsed_response
+
+
+def group_response(group):
     """Response for create/get group."""
     now, now_str = get_time_now()
     parsed_response = response_metadata(now_str)
     parsed_response['Group'] = {
-        'GroupId': group_id,
-        'GroupName': group_name,
-        'Arn': 'arn:aws:iam::123456789123:group/%s' % group_name,
-        'Path': '/openbare/'
+        'GroupId': group.id,
+        'GroupName': group.name,
+        'Arn': group.arn,
+        'Path': group.path
     }
     return parsed_response
 
@@ -89,13 +116,15 @@ def list_access_keys_response(keys):
     return parsed_response
 
 
-def list_attached_policies_response(policies):
+def list_attached_user_policies_response(policies):
     """Response for list user attached policies endpoint."""
     now, now_str = get_time_now()
     parsed_response = response_metadata(now_str)
     parsed_response['IsTruncated'] = False
-    policies_response = [{'PolicyArn': 'arn:aws:iam::aws:policy/%s' % policy,
-                          'PolicyName': policy} for policy in policies]
+    policies_response = [
+        {'PolicyArn': policy.arn,
+         'PolicyName': policy.name
+         } for policy in policies]
     parsed_response['AttachedPolicies'] = policies_response
     return parsed_response
 

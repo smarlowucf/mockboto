@@ -21,7 +21,7 @@ test_requirements = [
 setup(
     name='mockboto3',
     version='0.1.0',
-    description="Python package for mocking out the boto3 library.",
+    description="Python package for mocking the boto3 library.",
     long_description=readme + '\n\n' + history,
     author="Sean Marlow",
     author_email='sean.marlow@suse.com',
