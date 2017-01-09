@@ -535,7 +535,7 @@ class TestUserPolicy:
         cls.client = boto3.client('iam')
         cls.policy = 'arn:aws:iam::aws:policy/Admins'
         cls.user = 'John'
-    
+
     @mock_iam
     def test_detach_user_policy_exception(self):
         """Test detach non existent user policy raises exception."""
