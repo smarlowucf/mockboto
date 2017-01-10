@@ -21,7 +21,7 @@ test_requirements = [
 dev_requirements = [
     'bumpversion',
     'flake8',
-    'pip>=8.1.2',
+    'pip>=7.0.0',
     'Sphinx'
 ] + test_requirements
 
