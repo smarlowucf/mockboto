@@ -4,14 +4,17 @@ mockboto3
 
 
 .. image:: https://img.shields.io/pypi/v/mockboto3.svg
-        :target: https://pypi.python.org/pypi/mockboto3
+    :target: https://pypi.python.org/pypi/mockboto3
 
 .. image:: https://img.shields.io/travis/smarlowucf/mockboto3.svg
-        :target: https://travis-ci.org/smarlowucf/mockboto3
+    :target: https://travis-ci.org/smarlowucf/mockboto3
+
+.. image:: https://codecov.io/gh/smarlowucf/mockboto3/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/smarlowucf/mockboto3
 
 .. image:: https://readthedocs.org/projects/mockboto3/badge/?version=latest
-        :target: https://mockboto3.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
+    :target: https://mockboto3.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
 
 
 Python package for mocking the boto3 library.
