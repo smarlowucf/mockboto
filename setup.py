@@ -18,6 +18,12 @@ test_requirements = [
     'nose',
 ]
 
+dev_requirements = [
+    'bumpversion',
+    'flake8',
+    'Sphinx'
+] + test_requirements
+
 setup(
     name='mockboto3',
     version='0.1.0',
@@ -33,12 +39,16 @@ setup(
                  'mockboto3'},
     include_package_data=True,
     install_requires=requirements,
+    extras_require={
+        'dev': dev_requirements
+    },
     license="MIT license",
     zip_safe=False,
     keywords='mockboto3',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
+        'Topic :: Software Development :: Testing',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3',
