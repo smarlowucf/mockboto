@@ -13,10 +13,6 @@ mockboto3
         :target: https://mockboto3.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-.. image:: https://pyup.io/repos/github/smarlowucf/mockboto3/shield.svg
-     :target: https://pyup.io/repos/github/smarlowucf/mockboto3/
-     :alt: Updates
-
 
 Python package for mocking the boto3 library.
 
