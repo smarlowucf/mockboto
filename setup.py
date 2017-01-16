@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -33,9 +33,7 @@ setup(
     author="Sean Marlow",
     author_email='sean.marlow@suse.com',
     url='https://github.com/smarlowucf/mockboto3',
-    packages=[
-        'mockboto3',
-    ],
+    packages=find_packages(),
     package_dir={'mockboto3':
                  'mockboto3'},
     include_package_data=True,
